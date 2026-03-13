@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart ID Card Detection — Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; }
+        .navbar { background: #1e293b; padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #3b82f6; }
+        .navbar h1 { font-size: 1.4rem; color: #3b82f6; }
+        .navbar a { color: #94a3b8; text-decoration: none; margin-left: 2rem; transition: color 0.2s; }
+        .navbar a:hover { color: #3b82f6; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+        .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
+        .card { background: #1e293b; border-radius: 12px; padding: 1.5rem; border: 1px solid #334155; }
+        .card h2 { font-size: 1.1rem; margin-bottom: 1rem; color: #94a3b8; }
+        .video-container { position: relative; width: 100%; border-radius: 8px; overflow: hidden; background: #000; }
+        .video-container img { width: 100%; display: block; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
+        .stat { background: #0f172a; border-radius: 8px; padding: 1rem; text-align: center; }
+        .stat .value { font-size: 2rem; font-weight: 700; }
+        .stat .label { font-size: 0.8rem; color: #64748b; margin-top: 0.3rem; }
+        .stat.green .value { color: #22c55e; }
+        .stat.red .value { color: #ef4444; }
+        .stat.blue .value { color: #3b82f6; }
+        .stat.yellow .value { color: #eab308; }
+        .alert-list { max-height: 400px; overflow-y: auto; }
+        .alert-item { display: flex; align-items: center; gap: 1rem; padding: 0.8rem; background: #0f172a; border-radius: 8px; margin-bottom: 0.5rem; border-left: 3px solid #ef4444; }
+        .alert-item img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
+        .alert-item .info { flex: 1; }
+        .alert-item .name { font-weight: 600; color: #f8fafc; }
+        .alert-item .time { font-size: 0.8rem; color: #64748b; }
+        .no-avatar { width: 50px; height: 50px; border-radius: 50%; background: #334155; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <h1>Smart ID Card Detection System</h1>
+        <div>
+            <a href="/">Dashboard</a>
+            <a href="/alerts">Alert Log</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat green"><div class="value" id="compliance-rate">0%</div><div class="label">Compliance Rate</div></div>
+            <div class="stat red"><div class="value" id="violations">0</div><div class="label">Violations</div></div>
+            <div class="stat blue"><div class="value" id="frames">0</div><div class="label">Frames Processed</div></div>
+            <div class="stat yellow"><div class="value" id="compliant">0</div><div class="label">Compliant Detections</div></div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>Live Camera Feed</h2>
+                <div class="video-container">
+                    <img src="/video_feed" alt="Live feed" />
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Recent Alerts</h2>
+                <div class="alert-list" id="alert-list">
+                    <p style="color: #64748b; text-align: center; padding: 2rem;">No alerts yet</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateStats() {
+            fetch('/api/stats')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('compliance-rate').textContent = data.compliance_rate + '%';
+                    document.getElementById('violations').textContent = data.total_violations;
+                    document.getElementById('frames').textContent = data.total_frames;
+                    document.getElementById('compliant').textContent = data.total_compliant;
+                });
+        }
+
+        function updateAlerts() {
+            fetch('/api/alerts?limit=20')
+                .then(r => r.json())
+                .then(alerts => {
+                    const list = document.getElementById('alert-list');
+                    if (alerts.length === 0) return;
+
+                    list.innerHTML = '';
+                    alerts.reverse().forEach(alert => {
+                        const div = document.createElement('div');
+                        div.className = 'alert-item';
+
+                        const avatar = alert.face_image
+                            ? `<img src="data:image/jpeg;base64,${alert.face_image}" alt="face" />`
+                            : '<div class="no-avatar">?</div>';
+
+                        div.innerHTML = `
+                            ${avatar}
+                            <div class="info">
+                                <div class="name">${alert.identity || 'Unknown'}</div>
+                                <div class="time">${new Date(alert.timestamp).toLocaleTimeString()}</div>
+                            </div>
+                        `;
+                        list.appendChild(div);
+                    });
+                });
+        }
+
+        setInterval(updateStats, 2000);
+        setInterval(updateAlerts, 3000);
+        updateStats();
+        updateAlerts();
+    </script>
+</body>
+</html>

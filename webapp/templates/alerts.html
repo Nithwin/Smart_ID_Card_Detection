@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alert Log — Smart ID Detection</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; }
+        .navbar { background: #1e293b; padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #3b82f6; }
+        .navbar h1 { font-size: 1.4rem; color: #3b82f6; }
+        .navbar a { color: #94a3b8; text-decoration: none; margin-left: 2rem; transition: color 0.2s; }
+        .navbar a:hover { color: #3b82f6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .header h2 { color: #f8fafc; }
+        .btn { padding: 0.5rem 1.2rem; border-radius: 6px; border: none; cursor: pointer; font-size: 0.9rem; }
+        .btn-danger { background: #dc2626; color: white; }
+        .btn-danger:hover { background: #b91c1c; }
+        table { width: 100%; border-collapse: collapse; background: #1e293b; border-radius: 12px; overflow: hidden; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #334155; }
+        th { background: #334155; color: #94a3b8; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; }
+        td { color: #e2e8f0; }
+        .face-thumb { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; }
+        .no-face { width: 45px; height: 45px; border-radius: 50%; background: #475569; display: flex; align-items: center; justify-content: center; }
+        .badge { padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+        .badge-unknown { background: #f59e0b22; color: #f59e0b; }
+        .badge-known { background: #22c55e22; color: #22c55e; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <h1>Smart ID Card Detection System</h1>
+        <div>
+            <a href="/">Dashboard</a>
+            <a href="/alerts">Alert Log</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <h2>Violation Alert Log</h2>
+            <button class="btn btn-danger" onclick="clearAlerts()">Clear All Alerts</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Face</th>
+                    <th>Identity</th>
+                    <th>Timestamp</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="alert-body">
+                <tr><td colspan="4" style="text-align:center;color:#64748b;">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        function loadAlerts() {
+            fetch('/api/alerts?limit=200')
+                .then(r => r.json())
+                .then(alerts => {
+                    const body = document.getElementById('alert-body');
+                    if (alerts.length === 0) {
+                        body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#64748b;">No alerts recorded</td></tr>';
+                        return;
+                    }
+                    body.innerHTML = '';
+                    alerts.reverse().forEach(a => {
+                        const face = a.face_image
+                            ? `<img class="face-thumb" src="data:image/jpeg;base64,${a.face_image}" />`
+                            : '<div class="no-face">?</div>';
+                        const isKnown = a.identity && a.identity !== 'Unknown' && a.identity !== 'No Face';
+                        const badge = isKnown
+                            ? `<span class="badge badge-known">${a.identity}</span>`
+                            : `<span class="badge badge-unknown">${a.identity || 'Unknown'}</span>`;
+                        const row = document.createElement('tr');
+                        row.innerHTML = `<td>${face}</td><td>${badge}</td><td>${new Date(a.timestamp).toLocaleString()}</td><td style="color:#ef4444;">No ID Card</td>`;
+                        body.appendChild(row);
+                    });
+                });
+        }
+
+        function clearAlerts() {
+            fetch('/api/alerts/clear', { method: 'POST' })
+                .then(() => loadAlerts());
+        }
+
+        loadAlerts();
+        setInterval(loadAlerts, 5000);
+    </script>
+</body>
+</html>
