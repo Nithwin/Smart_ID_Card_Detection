@@ -43,9 +43,11 @@ def register_custom_modules():
 
     # Update the __all__ in modules if it exists
     if hasattr(nn_modules, '__all__'):
+        all_list = list(nn_modules.__all__)
         for name in custom_modules:
-            if name not in nn_modules.__all__:
-                nn_modules.__all__.append(name)
+            if name not in all_list:
+                all_list.append(name)
+        nn_modules.__all__ = tuple(all_list)
 
     print(f"[CA-YOLOv8] Registered {len(custom_modules)} custom modules: {list(custom_modules.keys())}")
     return custom_modules
