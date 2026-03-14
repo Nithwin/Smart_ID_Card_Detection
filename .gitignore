@@ -15,11 +15,8 @@ env/
 # Uploaded/generated files
 backend/uploads/
 backend/alert_images/
-backend/face_db/
 
 # Model files (large)
-*.pt
-*.tflite
 
 # Node
 node_modules/
