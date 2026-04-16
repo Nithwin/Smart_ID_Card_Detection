@@ -575,6 +575,79 @@ print(f"\nAll modules verified! Ready to train.")
 
 ---
 
+## CELL 11b — Check Dataset Size (RAM Safety Check)
+
+```python
+# ============================================================
+# Run this before training to decide cache='ram' vs cache=True
+# cache='ram'  → loads ALL images into CPU RAM (fastest, but needs ~6GB+ free)
+# cache=True   → caches to local SSD (slower than RAM, but safe for big datasets)
+# ============================================================
+
+import os
+import shutil
+
+DATASET_PATH = dataset.location  # From Cell 9
+
+# Check dataset disk size
+total_size = 0
+for dirpath, dirnames, filenames in os.walk(DATASET_PATH):
+    for f in filenames:
+        fp = os.path.join(dirpath, f)
+        total_size += os.path.getsize(fp)
+size_gb = total_size / 1e9
+
+# Check available RAM
+mem = shutil.disk_usage('/content')
+ram_info = os.popen("free -h").read()
+
+print(f"Dataset size:     {size_gb:.2f} GB")
+print(f"\nSystem memory:")
+print(ram_info)
+
+if size_gb < 6:
+    print(f"✅ Dataset ({size_gb:.1f} GB) fits in RAM → using cache='ram' (fastest)")
+else:
+    print(f"⚠️  Dataset ({size_gb:.1f} GB) is large → change cache='ram' to cache=True in training cells")
+```
+
+---
+
+## CELL 11c — GPU Memory Cleanup (Run Before Each Experiment)
+
+```python
+# ============================================================
+# IMPORTANT: Run this cell BEFORE each training experiment
+# Clears leftover GPU memory from previous runs
+# If this doesn't help, do: Runtime → Restart runtime
+# ============================================================
+
+import gc
+import torch
+
+# Delete any leftover model variables
+for var_name in ['model_baseline', 'model_ca', 'model_p2', 'model_cbam',
+                 'results_baseline', 'results_ca', 'results_p2', 'results_cbam',
+                 'pretrained']:
+    if var_name in dir():
+        exec(f'del {var_name}')
+
+gc.collect()
+torch.cuda.empty_cache()
+torch.cuda.reset_peak_memory_stats()
+
+# Verify GPU is free
+free_mem = torch.cuda.mem_get_info()[0] / 1e9
+total_mem = torch.cuda.mem_get_info()[1] / 1e9
+print(f"GPU Memory: {free_mem:.1f} GB free / {total_mem:.1f} GB total")
+if free_mem < total_mem * 0.8:
+    print("⚠️  GPU still has memory in use! Do: Runtime → Restart runtime")
+else:
+    print("✅ GPU memory is clean, ready to train!")
+```
+
+---
+
 ## CELL 12 — EXPERIMENT 1: Train Baseline YOLOv8m (for comparison)
 
 ```python
@@ -589,9 +662,13 @@ model_baseline = YOLO('yolov8m.pt')  # Load pretrained YOLOv8m
 
 results_baseline = model_baseline.train(
     data='configs/dataset.yaml',
-    epochs=70,
+    epochs=150,
     imgsz=640,
-    batch=16,
+    batch=-1,          # auto-batch: finds max batch size that fits your GPU
+    cache='ram',       # load dataset into RAM after epoch 1 (eliminates I/O wait)
+    workers=8,         # parallel data loading threads
+    device=0,          # explicit GPU
+    amp=True,          # mixed precision (FP16) — ~1.5x faster on T4/A100
     patience=30,
     optimizer='SGD',
     lr0=0.01,
@@ -622,6 +699,13 @@ results_baseline = model_baseline.train(
 )
 
 print("\n✅ Baseline YOLOv8m training complete!")
+
+# Free GPU memory before next experiment
+import gc; gc.collect()
+import torch; torch.cuda.empty_cache()
+del model_baseline, results_baseline
+gc.collect(); torch.cuda.empty_cache()
+print(f"GPU free: {torch.cuda.mem_get_info()[0]/1e9:.1f} GB")
 ```
 
 ---
@@ -660,9 +744,13 @@ print(f"Transferred {transferred} layers from pretrained YOLOv8m")
 
 results_ca = model_ca.train(
     data='configs/dataset.yaml',
-    epochs=70,
+    epochs=150,
     imgsz=640,
-    batch=16,
+    batch=-1,          # auto-batch: finds max batch size that fits your GPU
+    cache='ram',       # load dataset into RAM after epoch 1 (eliminates I/O wait)
+    workers=8,         # parallel data loading threads
+    device=0,          # explicit GPU
+    amp=True,          # mixed precision (FP16) — ~1.5x faster on T4/A100
     patience=30,
     optimizer='SGD',
     lr0=0.01,
@@ -693,6 +781,13 @@ results_ca = model_ca.train(
 )
 
 print("\n✅ CA-YOLOv8 (3-head) training complete!")
+
+# Free GPU memory before next experiment
+import gc; gc.collect()
+import torch; torch.cuda.empty_cache()
+del model_ca, results_ca, pretrained
+gc.collect(); torch.cuda.empty_cache()
+print(f"GPU free: {torch.cuda.mem_get_info()[0]/1e9:.1f} GB")
 ```
 
 ---
@@ -729,9 +824,13 @@ print(f"Transferred {transferred} layers from pretrained YOLOv8m")
 
 results_p2 = model_p2.train(
     data='configs/dataset.yaml',
-    epochs=70,
+    epochs=150,
     imgsz=640,
-    batch=8,           # Reduced batch size (P2 head uses more memory)
+    batch=-1,          # auto-batch: finds max batch size (P2 head uses more memory)
+    cache='ram',       # load dataset into RAM after epoch 1 (eliminates I/O wait)
+    workers=8,         # parallel data loading threads
+    device=0,          # explicit GPU
+    amp=True,          # mixed precision halves VRAM usage, allows larger batch
     patience=30,
     optimizer='SGD',
     lr0=0.01,
@@ -762,6 +861,13 @@ results_p2 = model_p2.train(
 )
 
 print("\n✅ CA-YOLOv8-P2 (4-head) training complete!")
+
+# Free GPU memory before next step
+import gc; gc.collect()
+import torch; torch.cuda.empty_cache()
+del model_p2, results_p2, pretrained
+gc.collect(); torch.cuda.empty_cache()
+print(f"GPU free: {torch.cuda.mem_get_info()[0]/1e9:.1f} GB")
 ```
 
 ---
@@ -963,9 +1069,13 @@ model_cbam.model.load_state_dict(model_state, strict=False)
 
 results_cbam = model_cbam.train(
     data='configs/dataset.yaml',
-    epochs=100,       # Shorter for ablation
+    epochs=150,
     imgsz=640,
-    batch=16,
+    batch=-1,          # auto-batch: finds max batch size
+    cache='ram',       # load dataset into RAM after epoch 1
+    workers=8,
+    device=0,
+    amp=True,
     patience=25,
     optimizer='SGD',
     lr0=0.01,
@@ -1274,20 +1384,20 @@ Roboflow assigns class IDs alphabetically by default:
 - If reversed, update `names:` in Cell 9's dataset_yaml to match
 
 ## If GPU runs out of memory:
-- Reduce `batch` from 16 to 8 (or even 4)
-- For P2 model, batch=8 is recommended
-- Use `imgsz=512` instead of 640
+- `batch=-1` (auto-batch) should handle this automatically
+- If still OOM: set `batch=8` manually, or try `imgsz=512` instead of 640
+- Switch `cache='ram'` to `cache=True` if CPU RAM runs out
 
 ## Training order:
 - **Run Cells 1-11 first** (Setup + Dataset + Verify)
-- **Run Cell 12** (Baseline) — ~40 min
-- **Then Cell 13** (CA-YOLOv8 3-head) — ~45 min
-- **Then Cell 14** (CA-YOLOv8-P2 4-head) — ~50 min
-- **Total: ~2 hours** for all 3 models (70 epochs each)
+- **Run Cell 12** (Baseline) — ~85 min
+- **Then Cell 13** (CA-YOLOv8 3-head) — ~95 min
+- **Then Cell 14** (CA-YOLOv8-P2 4-head) — ~110 min
+- **Total: ~5 hours** for all 3 models (150 epochs each)
 - Cell 17 (Ablation) is optional but good for paper
 
 ## Quick test (fewer epochs):
-Change `epochs=70` to `epochs=5` for a quick test run to verify everything works.
+Change `epochs=150` to `epochs=5` for a quick test run to verify everything works.
 
 ## Roboflow API Key:
 - Find it at: roboflow.com → Settings → API Key (under your workspace)
