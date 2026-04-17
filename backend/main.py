@@ -304,7 +304,7 @@ def run_detection(frame: np.ndarray, conf: float = 0.5, is_camera: bool = False)
     # 3) Face recognition via InsightFace (single pass — no MediaPipe needed)
     all_faces_info = []
     for entry in compliance:
-        px1, py1, px2, py2 = [int(v) for v in entry["person"]["box"]]
+        px1, py1, px2, py2 = [int(v) for v in entry["person"]["box"]]  # type: ignore
         # Clamp to frame bounds
         px1, py1 = max(0, px1), max(0, py1)
         px2, py2 = min(w_orig, px2), min(h_orig, py2)
@@ -345,7 +345,7 @@ def run_detection(frame: np.ndarray, conf: float = 0.5, is_camera: bool = False)
 
             # Check if this person was already alerted recently
             last_alert = _recent_alerts.get(dedup_key, 0)
-            if is_camera and (now - last_alert) < ALERT_COOLDOWN:
+            if (now - last_alert) < ALERT_COOLDOWN:
                 continue  # Skip — already alerted recently
 
             _recent_alerts[dedup_key] = now
@@ -370,11 +370,10 @@ def run_detection(frame: np.ndarray, conf: float = 0.5, is_camera: bool = False)
                     fp.write(face_bytes)
 
             # Persist to SQLite
-            import json as _json
             insert_alert(
                 alert_id=alert_entry["id"],
                 timestamp=alert_entry["timestamp"],
-                person_box=_json.dumps(f["person_box"]),
+                person_box=json.dumps(f["person_box"]),
                 face_detected=f["face_detected"],
                 face_image_path=face_image_path,
                 identified_name=f["identified_name"],
@@ -455,7 +454,7 @@ def run_detection(frame: np.ndarray, conf: float = 0.5, is_camera: bool = False)
 def camera_loop():
     global camera_cap, camera_running, latest_annotated_frame, latest_raw_frame
     print("[Camera] Thread started")
-    frame_count = 0
+    frame_count: int = 0
     last_result_bytes = None
     while camera_running:
         with camera_lock:

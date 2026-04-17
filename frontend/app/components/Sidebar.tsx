@@ -3,17 +3,23 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useTheme } from "next-themes";
 import {
   LayoutDashboard,
   Upload,
+  Film,
   Camera,
   AlertTriangle,
-  UserPlus
+  UserPlus,
+  Moon,
+  Sun
 } from "lucide-react";
 
 const links = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/detect", label: "Detect Image", icon: Upload },
+  { href: "/detect-video", label: "Detect Video", icon: Film },
   { href: "/camera", label: "Live Camera", icon: Camera },
   { href: "/alerts", label: "Alerts", icon: AlertTriangle },
   { href: "/faces", label: "Face Registry", icon: UserPlus },
@@ -23,6 +29,13 @@ const links = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <aside className="w-64 shrink-0 border-r border-slate-800 bg-slate-950 flex flex-col">
@@ -38,7 +51,7 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-3 space-y-1">
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {links.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
           return (
@@ -60,21 +73,16 @@ export default function Sidebar() {
 
       {/* Footer & Theme Options */}
       <div className="p-4 border-t border-slate-800 text-[11px] text-slate-500 bg-slate-950/50 flex flex-col gap-3">
-        <button 
-           onClick={() => {
-              if (document.documentElement.classList.contains('dark')) {
-                document.documentElement.classList.remove('dark');
-                document.documentElement.classList.add('light'); // Custom classes usually toggle dark
-              } else {
-                document.documentElement.classList.add('dark');
-                document.documentElement.classList.remove('light');
-              }
-           }}
-           className="w-full py-2 bg-slate-900 border border-slate-800 rounded-lg hover:bg-slate-800 transition text-slate-300 font-medium flex items-center justify-center gap-2"
-        >
-          Toggle Light/Dark Theme
-        </button>
-        <div className="text-center">CA-YOLOv8 + InsightFace System</div>
+        {mounted && (
+          <button 
+             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+             className="w-full py-2.5 bg-slate-900 border border-slate-800 rounded-lg hover:bg-slate-800 transition text-slate-300 font-medium flex items-center justify-center gap-2"
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-400" />}
+            {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+          </button>
+        )}
+        <div className="text-center mt-1">CA-YOLOv8 + InsightFace System</div>
       </div>
     </aside>
   );
