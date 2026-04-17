@@ -31,6 +31,8 @@ from contextlib import asynccontextmanager
 
 import cv2
 import numpy as np
+import requests
+from pydantic import BaseModel
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -56,6 +58,25 @@ alerts_log: list[dict] = []  # in-memory cache for recent camera alerts
 # {identified_name_or_box_key: last_alert_timestamp}
 _recent_alerts: dict[str, float] = {}
 ALERT_COOLDOWN = 30  # seconds — same person won't be re-alerted within this window
+
+# Feature 1: Temporal Buffer (Anti-False-Positive)
+_temporal_buffer: dict[str, int] = {}
+REQUIRED_MISSING_FRAMES = 5  # Require 5 consecutive frames without ID to trigger violation
+
+# Feature 3: Automated WhatsApp / Email Alerts
+def send_automated_alert(name: str):
+    """MOCK implementation of Twilio/SendGrid automated warning."""
+    print("\n" + "═"*60)
+    print(f"🚀 [AUTOMATED ALERT TRIGGERED] Sending SMS/Email...")
+    print(f"👤 To: {name}")
+    print(f"✉️  Message: 'Warning: You were detected entering the campus without your ID card. Please wear it immediately.'")
+    print("═"*60 + "\n")
+    
+    try:
+        with open(str(PROJECT_ROOT / "sent_alerts.log"), "a") as f:
+            f.write(f"[{datetime.now().isoformat()}] Sent warning to {name}\n")
+    except Exception:
+        pass
 
 # Camera globals
 camera_lock = threading.Lock()
@@ -337,11 +358,26 @@ def run_detection(frame: np.ndarray, conf: float = 0.5, is_camera: bool = False)
     update_stats(frames=1, detections=len(persons) + len(cards),
                  violations=n_bad, compliant=n_ok, identified=n_identified)
 
-    # 5) Alert log — with deduplication
+    # 5) Alert log — with deduplication and temporal buffering
     for f in all_faces_info:
+        # Build dedup key based on spatial rough area or identified name
+        rough_x = int(f['person_box'][0] // 50) * 50
+        rough_y = int(f['person_box'][1] // 50) * 50
+        dedup_key = f["identified_name"] or f"box_{rough_x}_{rough_y}"
+        
+        if f["compliant"]:
+            # Feature 1: Reset temporal buffer if compliant
+            if dedup_key in _temporal_buffer:
+                _temporal_buffer[dedup_key] = 0
+            continue
+
         if not f["compliant"]:
-            # Build a dedup key: use identified name, or fall back to box region
-            dedup_key = f["identified_name"] or f"box_{int(f['person_box'][0])}_{int(f['person_box'][1])}"
+            # Feature 1: Increment temporal buffer missing counter
+            _temporal_buffer[dedup_key] = _temporal_buffer.get(dedup_key, 0) + 1
+            
+            # If camera mode and buffer not met, skip alert to avoid false positives
+            if is_camera and _temporal_buffer[dedup_key] < REQUIRED_MISSING_FRAMES:
+                continue
 
             # Check if this person was already alerted recently
             last_alert = _recent_alerts.get(dedup_key, 0)
@@ -349,6 +385,10 @@ def run_detection(frame: np.ndarray, conf: float = 0.5, is_camera: bool = False)
                 continue  # Skip — already alerted recently
 
             _recent_alerts[dedup_key] = now
+            
+            # Feature 3: Trigger Automated Alert
+            if f["identified_name"]:
+                send_automated_alert(f["identified_name"])
 
             alert_entry = {
                 "id": str(uuid.uuid4())[:8],
@@ -748,6 +788,92 @@ async def api_reset_stats():
     reset_stats()
     return {"status": "reset"}
 
+
+class ChatRequest(BaseModel):
+    message: str
+
+@app.post("/api/chat")
+async def api_chat(req: ChatRequest):
+    groq_api_key = os.environ.get("GROQ_API_KEY")
+    if not groq_api_key:
+        return {"response": "Groq API key not set on the server. Please set GROQ_API_KEY environment variable.", "data": []}
+    
+    prompt = f"""
+    You are an AI assistant for a security dashboard.
+    The database has a table called `alerts` with the following schema:
+    CREATE TABLE alerts (
+        id TEXT PRIMARY KEY,
+        timestamp TEXT NOT NULL,
+        person_box TEXT,
+        face_detected INTEGER DEFAULT 0,
+        face_image_path TEXT,
+        identified_name TEXT,
+        similarity REAL DEFAULT 0.0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    
+    The user asked: "{req.message}"
+    
+    Write an SQLite query that answers this request.
+    Rules:
+    - Only return the RAW SQL query. NO markdown, NO explanations.
+    - Select all columns: `SELECT * FROM alerts...`
+    - Make sure to use LIKE '%name%' or lower() for name matching if needed.
+    - Limit to 20 rows.
+    """
+    
+    headers = {"Authorization": f"Bearer {groq_api_key}", "Content-Type": "application/json"}
+    payload = {
+        "model": "llama3-8b-8192",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.0
+    }
+    
+    try:
+        res = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
+        res.raise_for_status()
+        sql_query = res.json()["choices"][0]["message"]["content"].strip()
+        
+        # Clean up Markdown
+        if sql_query.startswith("```sql"): sql_query = sql_query[6:]
+        if sql_query.startswith("```"): sql_query = sql_query[3:]
+        if sql_query.endswith("```"): sql_query = sql_query[:-3]
+        sql_query = sql_query.strip()
+        
+        if not sql_query.lower().startswith("select"):
+            raise ValueError("Only SELECT queries are allowed.")
+            
+        from database import get_db
+        with get_db() as conn:
+            rows = conn.execute(sql_query).fetchall()
+            
+        alerts = [dict(r) for r in rows]
+        
+        # Inject images
+        for a in alerts:
+            a["face_image"] = None
+            if a.get("face_image_path"):
+                img_path = ALERTS_DIR / a["face_image_path"]
+                if img_path.exists():
+                    a["face_image"] = base64.b64encode(img_path.read_bytes()).decode()
+            if isinstance(a.get("person_box"), str):
+                import json as _json
+                a["person_box"] = _json.loads(a["person_box"])
+                
+        # Get natural language answer
+        answer_prompt = f"""
+        User asked: "{req.message}"
+        Database returned {len(alerts)} records matching this query.
+        Write a very short, conversational response to the user.
+        """
+        payload["messages"] = [{"role": "user", "content": answer_prompt}]
+        ans_res = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
+        nl_answer = ans_res.json()["choices"][0]["message"]["content"].strip()
+        
+        return {"response": nl_answer, "data": alerts, "sql": sql_query}
+        
+    except Exception as e:
+        return {"response": f"Error processing request: {str(e)}", "data": [], "sql": ""}
 
 # --- Face Registration ---
 

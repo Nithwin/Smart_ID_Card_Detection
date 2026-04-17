@@ -14,6 +14,7 @@ import {
   Zap
 } from "lucide-react";
 import { StatCard } from "./components/StatCard";
+import { GuardAssistant } from "./components/GuardAssistant";
 
 interface Stats {
   total_frames: number;
@@ -274,6 +275,7 @@ export default function DashboardPage() {
         </motion.div>
 
       </div>
+      <GuardAssistant />
     </div>
   );
 }
