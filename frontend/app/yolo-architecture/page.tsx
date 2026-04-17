@@ -274,19 +274,26 @@ export default function YoloArchitecturePage() {
             </div>
 
             {/* Synced typewriter narration at bottom */}
-            <div className={`w-full px-6 pb-6 pt-2 transition-opacity duration-500 ${isMuted ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
-              <div className="max-w-3xl mx-auto bg-black/40 backdrop-blur-md rounded-xl border border-slate-700/50 p-4 min-h-[140px]">
-                {/* Unmount Typewriter when muted to stop intervals/CPU usage, but keeping wrapper height prevents layout jitter */}
-                {!isMuted && (
-                  <TypewriterText
-                    key={currentStage}
-                    text={NARRATIONS[currentStage]}
-                    speed={currentTypewriterSpeed}
-                    className="text-sm text-slate-300 leading-relaxed font-mono"
-                  />
-                )}
-              </div>
-            </div>
+            <AnimatePresence>
+              {!isMuted && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, overflow: "hidden" }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="w-full px-6 pb-6 pt-2"
+                >
+                  <div className="max-w-3xl mx-auto bg-black/40 backdrop-blur-md rounded-xl border border-slate-700/50 p-4 min-h-[140px]">
+                    <TypewriterText
+                      key={currentStage}
+                      text={NARRATIONS[currentStage]}
+                      speed={currentTypewriterSpeed}
+                      className="text-sm text-slate-300 leading-relaxed font-mono"
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         </AnimatePresence>
       </div>
