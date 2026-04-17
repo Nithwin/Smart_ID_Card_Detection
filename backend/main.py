@@ -68,7 +68,7 @@ UPLOAD_DIR = Path(__file__).parent / "uploads"
 FACE_DB_DIR = Path(__file__).parent / "face_db"
 ALERTS_DIR = Path(__file__).parent / "alert_images"
 KNOWN_FACES_DIR = Path(__file__).parent / "known_faces"
-MODEL_PATH = os.environ.get("MODEL_PATH", str(PROJECT_ROOT / "best.pt"))
+MODEL_PATH = os.environ.get("MODEL_PATH", str(PROJECT_ROOT / "models" / "best.pt"))
 
 SIMILARITY_THRESHOLD = 0.4
 
