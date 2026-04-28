@@ -32,12 +32,12 @@ export default function NNTrainingVisualization() {
   };
 
   const phaseLabels = ['Input Image', 'Rasterization', 'Convolution', 'Pooling', 'Flattening', 'Result'];
-  const accentColor = isDetected ? 'cyan' : 'red';
-
   return (
-    <div className="min-h-screen max-w-7xl mx-auto p-4 md:p-8 flex flex-col pt-8 md:pt-12 overflow-hidden">
+    <div className="min-h-screen max-w-7xl mx-auto p-4 md:p-8 flex flex-col pt-8 md:pt-12 overflow-hidden page-animate">
+      <div className={`pointer-events-none absolute left-0 top-0 h-72 w-72 rounded-full blur-3xl ${isDetected ? "bg-cyan-500/10" : "bg-red-500/10"}`} />
+      <div className={`pointer-events-none absolute right-0 bottom-0 h-72 w-72 rounded-full blur-3xl ${isDetected ? "bg-emerald-500/10" : "bg-orange-500/10"}`} />
 
-      <div className="text-center mb-6 md:mb-10 z-20">
+      <div className="text-center mb-6 md:mb-10 z-20 section-animate">
         <h1 className={`text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r ${isDetected ? 'from-emerald-400 to-cyan-500' : 'from-orange-400 to-red-500'} mb-3 drop-shadow-sm glow-text transition-all duration-500`}>
           Deep Learning 3D Visualizer
         </h1>
@@ -47,7 +47,7 @@ export default function NNTrainingVisualization() {
       </div>
 
       {/* Scenario Toggle */}
-      <div className="flex flex-wrap items-center justify-center gap-3 mb-6 z-20">
+      <div className="flex flex-wrap items-center justify-center gap-3 mb-6 z-20 section-animate delay-1">
         <button
           onClick={() => { setScenario("detected"); reset(); }}
           className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-bold transition-all ${
@@ -71,7 +71,7 @@ export default function NNTrainingVisualization() {
       </div>
 
       {/* Control Panel */}
-      <div className="flex items-center justify-center gap-4 mb-6 relative z-20">
+      <div className="flex items-center justify-center gap-4 mb-6 relative z-20 section-animate delay-2">
         <button
           onClick={() => setIsPlaying(!isPlaying)}
           className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-bold text-sm transition-all ${
@@ -91,7 +91,7 @@ export default function NNTrainingVisualization() {
       </div>
 
       {/* Progress Timeline */}
-      <div className="w-full max-w-3xl mx-auto mb-10 md:mb-16 relative z-20">
+      <div className="w-full max-w-3xl mx-auto mb-10 md:mb-16 relative z-20 section-animate delay-3">
         <div className="absolute top-1/2 left-0 right-0 h-1 bg-slate-800 -translate-y-1/2 rounded-full overflow-hidden">
           <div
             className={`h-full transition-all duration-1000 ease-out ${isDetected ? 'bg-cyan-500 shadow-[0_0_10px_#06b6d4]' : 'bg-red-500 shadow-[0_0_10px_#ef4444]'}`}
@@ -117,7 +117,7 @@ export default function NNTrainingVisualization() {
       </div>
 
       {/* 3D Visualization Arena */}
-      <div className="flex-1 relative w-full flex items-center justify-center min-h-[400px] md:min-h-[500px]" style={{perspective: '1200px'}}>
+      <div className="flex-1 relative w-full flex items-center justify-center min-h-[400px] md:min-h-[500px] section-animate delay-4" style={{perspective: '1200px'}}>
 
         {/* Phase 0: Regular Image */}
         <div className={`absolute transition-all duration-1000 ${

@@ -37,6 +37,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, StreamingResponse
+from starlette.concurrency import run_in_threadpool
 import aiofiles
 
 from database import init_db, insert_alert, get_alerts as db_get_alerts, clear_alerts as db_clear_alerts, update_stats, get_stats as db_get_stats, reset_stats
@@ -488,6 +489,73 @@ def run_detection(frame: np.ndarray, conf: float = 0.5, is_camera: bool = False)
     }
 
 
+def process_video_file(video_path: Path, confidence: float, sample_rate: int) -> dict:
+    """CPU-heavy video processing helper (runs in a worker thread)."""
+    cap = cv2.VideoCapture(str(video_path))
+    if not cap.isOpened():
+        raise ValueError("Cannot open video")
+
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = cap.get(cv2.CAP_PROP_FPS) or 0.0
+    frame_results = []
+    idx = 0
+
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            if idx % sample_rate == 0:
+                r = run_detection(frame, conf=confidence)
+                frame_results.append({
+                    "frame": idx,
+                    "time_sec": round(idx / fps, 2) if fps > 0 else 0,
+                    "stats": r["stats"],
+                    "compliance": r["compliance"],
+                    "violators": r["violators"],
+                })
+            idx += 1
+    finally:
+        cap.release()
+
+    return {
+        "video_info": {
+            "total_frames": total_frames,
+            "fps": round(fps, 1),
+            "frames_processed": len(frame_results),
+        },
+        "summary": {
+            "total_violations": sum(r["stats"]["violations"] for r in frame_results),
+            "total_compliant": sum(r["stats"]["compliant"] for r in frame_results),
+        },
+        "frames": frame_results,
+    }
+
+
+def _is_safe_select_query(sql: str) -> bool:
+    """Conservative SQL guardrail for chat endpoint."""
+    normalized = " ".join(sql.strip().split())
+    lowered = normalized.lower()
+
+    if not lowered.startswith("select "):
+        return False
+    if ";" in normalized:
+        return False
+
+    blocked = [
+        "insert ", "update ", "delete ", "drop ", "alter ", "create ",
+        "attach ", "pragma ", "replace ", "truncate ", "vacuum ",
+    ]
+    if any(token in lowered for token in blocked):
+        return False
+
+    # Only allow selecting from alerts table.
+    if " from alerts" not in lowered:
+        return False
+
+    return True
+
+
 # ---------------------------------------------------------------------------
 # Camera — runs in a background thread
 # ---------------------------------------------------------------------------
@@ -576,7 +644,7 @@ async def detect_image(file: UploadFile = File(...), confidence: float = 0.5):
         frame = decode_image(data)
     except ValueError:
         raise HTTPException(400, "Invalid image")
-    return run_detection(frame, conf=confidence)
+    return await run_in_threadpool(run_detection, frame, confidence, False)
 
 
 @app.post("/api/detect-video")
@@ -585,43 +653,13 @@ async def detect_video(file: UploadFile = File(...), confidence: float = 0.5, sa
     video_path = UPLOAD_DIR / f"{video_id}.mp4"
     async with aiofiles.open(str(video_path), "wb") as f:
         await f.write(await file.read())
-
-    cap = cv2.VideoCapture(str(video_path))
-    if not cap.isOpened():
-        os.remove(str(video_path))
-        raise HTTPException(400, "Cannot open video")
-
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    frame_results = []
-    idx = 0
-
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        if idx % sample_rate == 0:
-            r = run_detection(frame, conf=confidence)
-            frame_results.append({
-                "frame": idx,
-                "time_sec": round(idx / fps, 2) if fps > 0 else 0,
-                "stats": r["stats"],
-                "compliance": r["compliance"],
-                "violators": r["violators"],
-            })
-        idx += 1
-
-    cap.release()
-    os.remove(str(video_path))
-
-    return {
-        "video_info": {"total_frames": total_frames, "fps": round(fps, 1), "frames_processed": len(frame_results)},
-        "summary": {
-            "total_violations": sum(r["stats"]["violations"] for r in frame_results),
-            "total_compliant": sum(r["stats"]["compliant"] for r in frame_results),
-        },
-        "frames": frame_results,
-    }
+    try:
+        return await run_in_threadpool(process_video_file, video_path, confidence, sample_rate)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    finally:
+        if video_path.exists():
+            os.remove(str(video_path))
 
 
 # --- Camera Endpoints ---
@@ -830,7 +868,12 @@ async def api_chat(req: ChatRequest):
     }
     
     try:
-        res = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
+        res = await run_in_threadpool(
+            requests.post,
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers=headers,
+            json=payload,
+        )
         res.raise_for_status()
         sql_query = res.json()["choices"][0]["message"]["content"].strip()
         
@@ -840,12 +883,14 @@ async def api_chat(req: ChatRequest):
         if sql_query.endswith("```"): sql_query = sql_query[:-3]
         sql_query = sql_query.strip()
         
-        if not sql_query.lower().startswith("select"):
-            raise ValueError("Only SELECT queries are allowed.")
+        if not _is_safe_select_query(sql_query):
+            raise ValueError("Only safe SELECT queries on alerts are allowed.")
             
         from database import get_db
-        with get_db() as conn:
-            rows = conn.execute(sql_query).fetchall()
+        def _query_rows():
+            with get_db() as conn:
+                return conn.execute(sql_query).fetchall()
+        rows = await run_in_threadpool(_query_rows)
             
         alerts = [dict(r) for r in rows]
         
@@ -867,7 +912,12 @@ async def api_chat(req: ChatRequest):
         Write a very short, conversational response to the user.
         """
         payload["messages"] = [{"role": "user", "content": answer_prompt}]
-        ans_res = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
+        ans_res = await run_in_threadpool(
+            requests.post,
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers=headers,
+            json=payload,
+        )
         nl_answer = ans_res.json()["choices"][0]["message"]["content"].strip()
         
         return {"response": nl_answer, "data": alerts, "sql": sql_query}

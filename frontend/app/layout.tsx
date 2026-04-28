@@ -18,6 +18,11 @@ import { ThemeProvider } from "./components/ThemeProvider";
 export const metadata: Metadata = {
   title: "Smart ID Card Detection",
   description: "AI-powered ID card compliance monitoring system",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -30,10 +35,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased transition-colors duration-300`}
       >
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          <div className="flex h-screen overflow-hidden">
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+          <div className="min-h-screen md:flex">
             <Sidebar />
-            <main className="flex-1 overflow-y-auto">{children}</main>
+            <main className="flex-1 md:ml-72">{children}</main>
           </div>
         </ThemeProvider>
       </body>

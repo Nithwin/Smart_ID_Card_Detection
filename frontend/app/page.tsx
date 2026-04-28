@@ -60,220 +60,115 @@ export default function DashboardPage() {
     ? Math.round((stats.compliant / (stats.compliant + stats.violations)) * 100) : 0;
 
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto min-h-screen">
-      {/* Header Area */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="flex flex-col md:flex-row md:items-end justify-between border-b border-foreground/10 pb-6"
-      >
+    <div className="page-shell space-y-6 pb-10">
+      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 mb-4 rounded-full glass-panel border-blue-500/20 text-xs text-blue-400">
-             <Zap className="w-3.5 h-3.5" />
-             <span>CA-YOLOv8 Active</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 mb-3 rounded-full soft-card text-xs text-blue-700 dark:text-blue-200">
+            <Zap className="w-3.5 h-3.5" />
+            <span>CA-YOLOv8 Active</span>
           </div>
-          <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-indigo-400 to-purple-400 mb-2 glow-text">Command Center</h1>
-          <p className="text-sm text-muted flex items-center gap-2">
-            Real-time compliance intelligence <Activity className="w-4 h-4 text-emerald-400" />
-          </p>
+          <h1 className="section-title">Command Center</h1>
+          <p className="muted-text text-sm mt-1 flex items-center gap-2">Real-time compliance intelligence <Activity className="w-4 h-4" /></p>
         </div>
-        <div className="mt-4 md:mt-0 flex items-center gap-3 px-4 py-2 rounded-xl glass-panel">
-          <div className="relative flex h-3 w-3">
-            {online && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>}
-            <span className={`relative inline-flex rounded-full h-3 w-3 ${online ? "bg-emerald-500" : "bg-red-500"}`}></span>
-          </div>
-          <span className="text-sm font-medium text-muted">{online ? "System Online & Secure" : "System Offline"}</span>
+        <div className="app-card px-4 py-2 flex items-center gap-2 text-sm">
+          <span className={`w-2.5 h-2.5 rounded-full ${online ? "bg-emerald-500" : "bg-red-500"}`} />
+          <span className="muted-text">{online ? "System online" : "System offline"}</span>
         </div>
       </motion.div>
 
-      {/* Top Stat Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-        <StatCard delay={0.1} icon={<Eye className="w-5 h-5" />} label="Frames Processed" value={stats.total_frames} gradient="from-blue-600/20 to-blue-400/5" border="border-blue-500/30" text="text-blue-400" />
-        <StatCard delay={0.2} icon={<Users className="w-5 h-5" />} label="Total Detections" value={stats.total_detections} gradient="from-purple-600/20 to-purple-400/5" border="border-purple-500/30" text="text-purple-400" />
-        <StatCard delay={0.3} icon={<CheckCircle className="w-5 h-5" />} label="Compliant" value={stats.compliant} gradient="from-emerald-600/20 to-emerald-400/5" border="border-emerald-500/30" text="text-emerald-400" />
-        <StatCard delay={0.4} icon={<ShieldAlert className="w-5 h-5" />} label="Violations" value={stats.violations} gradient="from-red-600/20 to-rose-400/5" border="border-red-500/30" text="text-red-400" />
-        <StatCard delay={0.5} icon={<Brain className="w-5 h-5" />} label="Identified" value={stats.identified} gradient="from-indigo-600/20 to-indigo-400/5" border="border-indigo-500/30" text="text-indigo-400" />
-        <StatCard delay={0.6} icon={<Users className="w-5 h-5" />} label="Known Persons" value={stats.known_persons} gradient="from-sky-600/20 to-sky-400/5" border="border-sky-500/30" text="text-sky-400" />
+        <StatCard delay={0.1} icon={<Eye className="w-5 h-5" />} label="Frames Processed" value={stats.total_frames} gradient="from-blue-600/20 to-blue-400/5" border="border-blue-500/30" text="text-blue-600 dark:text-blue-300" />
+        <StatCard delay={0.2} icon={<Users className="w-5 h-5" />} label="Total Detections" value={stats.total_detections} gradient="from-purple-600/20 to-purple-400/5" border="border-purple-500/30" text="text-purple-600 dark:text-purple-300" />
+        <StatCard delay={0.3} icon={<CheckCircle className="w-5 h-5" />} label="Compliant" value={stats.compliant} gradient="from-emerald-600/20 to-emerald-400/5" border="border-emerald-500/30" text="text-emerald-600 dark:text-emerald-300" />
+        <StatCard delay={0.4} icon={<ShieldAlert className="w-5 h-5" />} label="Violations" value={stats.violations} gradient="from-red-600/20 to-rose-400/5" border="border-red-500/30" text="text-red-600 dark:text-red-300" />
+        <StatCard delay={0.5} icon={<Brain className="w-5 h-5" />} label="Identified" value={stats.identified} gradient="from-indigo-600/20 to-indigo-400/5" border="border-indigo-500/30" text="text-indigo-600 dark:text-indigo-300" />
+        <StatCard delay={0.6} icon={<Users className="w-5 h-5" />} label="Known Persons" value={stats.known_persons} gradient="from-sky-600/20 to-sky-400/5" border="border-sky-500/30" text="text-sky-600 dark:text-sky-300" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* Left Column: Compliance Meter & Pipeline Info */}
-        <motion.div 
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="lg:col-span-4 flex flex-col gap-8"
-        >
-          {/* Circular Progress Meter */}
-          <div className="glass-panel rounded-3xl p-8 relative overflow-hidden group">
-            <div className="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all duration-700"></div>
-            
-            <div className="flex items-center gap-3 mb-6 relative z-10">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-blue-400" />
-              </div>
-              <h2 className="font-bold text-lg text-foreground">Compliance Rate</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }} className="lg:col-span-4 space-y-6">
+          <div className="app-card p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <TrendingUp className="w-5 h-5 text-blue-600" />
+              <h2 className="font-semibold">Compliance Rate</h2>
             </div>
-            
-            <div className="flex items-center justify-center py-6">
-              <div className="relative w-48 h-48 drop-shadow-2xl">
-                <svg className="w-48 h-48 -rotate-90" viewBox="0 0 120 120">
-                  <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(15, 23, 42, 0.4)" strokeWidth="12" />
-                  <motion.circle
-                    initial={{ strokeDasharray: "0 339" }}
-                    animate={{ strokeDasharray: `${rate * 3.39} 339` }}
-                    transition={{ duration: 1.5, ease: "easeOut" }}
-                    cx="60" cy="60" r="54" fill="none"
-                    stroke={rate >= 75 ? "#10b981" : rate >= 50 ? "#f59e0b" : "#f43f5e"}
-                    strokeWidth="12" strokeLinecap="round"
-                    style={{ filter: "drop-shadow(0px 0px 8px rgba(59,130,246,0.3))" }}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-blue-400 to-indigo-400 glow-text">{rate}%</span>
-                  <span className="text-xs font-semibold uppercase tracking-widest mt-1 text-muted group-hover:text-blue-400 transition-colors">Target: 95%</span>
-                </div>
+            <div className="relative mx-auto w-40 h-40">
+              <svg className="w-40 h-40 -rotate-90" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(100,116,139,0.2)" strokeWidth="12" />
+                <motion.circle
+                  initial={{ strokeDasharray: "0 339" }}
+                  animate={{ strokeDasharray: `${rate * 3.39} 339` }}
+                  transition={{ duration: 1.2, ease: "easeOut" }}
+                  cx="60" cy="60" r="54" fill="none"
+                  stroke={rate >= 75 ? "#10b981" : rate >= 50 ? "#f59e0b" : "#ef4444"}
+                  strokeWidth="12" strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-4xl font-bold">{rate}%</span>
+                <span className="text-xs muted-text">Target: 95%</span>
               </div>
             </div>
-            <p className="text-center text-sm text-muted font-medium">
-              <span className="text-emerald-400">{stats.compliant} OK</span> <span className="mx-2 opacity-30">|</span> <span className="text-red-400">{stats.violations} Violations</span>
-            </p>
           </div>
 
-          {/* Pipeline Explanation Mini-Cards */}
-          <div className="glass-panel rounded-3xl p-6 relative overflow-hidden">
-            <h2 className="font-bold text-lg text-foreground mb-4 flex items-center gap-2">
-              <Activity className="w-5 h-5 text-purple-400" /> Pipeline Flow
-            </h2>
-            <div className="space-y-3 relative z-10">
+          <div className="app-card p-5">
+            <h2 className="font-semibold mb-3 flex items-center gap-2"><Activity className="w-4 h-4 text-indigo-500" /> Pipeline Flow</h2>
+            <div className="space-y-2">
               {[
-                { n: "1", t: "CA-YOLOv8", d: "Context-aware card detection", color: "blue" },
-                { n: "2", t: "Spatial Logic", d: "Person-Card IOU association", color: "emerald" },
-                { n: "3", t: "InsightFace", d: "Violator identity extraction", color: "indigo" },
-              ].map((s, idx) => (
-                <motion.div 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 + idx * 0.1 }}
-                  key={s.n} 
-                  className="flex gap-4 items-center p-3 rounded-xl bg-background/50 border border-foreground/5 hover:bg-background/80 transition-colors"
-                >
-                  <div className={`w-8 h-8 rounded-full bg-\${s.color}-500/20 text-\${s.color}-400 font-bold flex items-center justify-center shrink-0`}>
-                    {s.n}
-                  </div>
+                { n: "1", t: "CA-YOLOv8", d: "Context-aware card detection" },
+                { n: "2", t: "Spatial Logic", d: "Person-card association checks" },
+                { n: "3", t: "InsightFace", d: "Violator identity matching" },
+              ].map((s) => (
+                <div key={s.n} className="soft-card p-3 flex gap-3 items-start">
+                  <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center">{s.n}</span>
                   <div>
-                    <p className="text-sm font-semibold text-foreground">{s.t}</p>
-                    <p className="text-[11px] text-muted">{s.d}</p>
+                    <p className="text-sm font-semibold">{s.t}</p>
+                    <p className="text-xs muted-text">{s.d}</p>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
           </div>
         </motion.div>
 
-        {/* Right Column: Alerts Live Feed */}
-        <motion.div 
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="lg:col-span-8"
-        >
-          <div className="glass-panel rounded-3xl p-8 h-full flex flex-col relative overflow-hidden">
-            {/* Ambient Red Glow for Alerts Area */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
-
-            <div className="flex items-center justify-between mb-6 relative z-10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
-                  <ShieldAlert className="w-5 h-5 text-red-500" />
-                </div>
-                <div>
-                  <h2 className="font-bold text-lg text-foreground">Live Violation Feed</h2>
-                  <p className="text-xs text-muted">Real-time unmasked access attempts</p>
-                </div>
-              </div>
-              <div className="px-3 py-1 rounded bg-background border border-red-500/20 text-red-400 text-xs font-semibold animate-pulse">
-                Recording Active
-              </div>
+        <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }} className="lg:col-span-8">
+          <div className="app-card p-6 h-full">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+              <h2 className="font-semibold text-lg flex items-center gap-2"><ShieldAlert className="w-5 h-5 text-red-500" /> Live Violation Feed</h2>
+              <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700">Recording Active</span>
             </div>
-
             {alerts.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-muted space-y-4">
-                <CheckCircle className="w-16 h-16 opacity-20 text-emerald-400" />
-                <p className="font-medium">All clear. No recent violations detected.</p>
+              <div className="py-20 text-center muted-text">
+                <CheckCircle className="w-10 h-10 mx-auto mb-2 text-emerald-500" />
+                All clear. No recent violations.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto pr-2 relative z-10 pb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[640px] overflow-y-auto pr-1">
                 {alerts.map((a) => (
-                  <motion.div 
-                    layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    key={a.id} 
-                    className="group relative flex items-start gap-4 p-4 rounded-2xl bg-gradient-to-b from-background/80 to-background border border-foreground/10 hover:border-red-500/40 hover:shadow-[0_0_20px_rgba(244,63,94,0.15)] transition-all duration-300"
-                  >
-                    
-                    {/* Image Area */}
-                    <div className="shrink-0 relative">
+                  <motion.div layout initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} key={a.id} className="soft-card p-3 flex gap-3">
+                    <div className="shrink-0">
                       {a.face_image ? (
-                        <div className="w-16 h-16 rounded-xl overflow-hidden border border-foreground/10 group-hover:border-red-500/50 transition-colors">
-                          <Image src={`data:image/jpeg;base64,${a.face_image}`} alt="Face" width={64} height={64} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500" />
-                        </div>
+                        <Image src={`data:image/jpeg;base64,${a.face_image}`} alt="Face" width={64} height={64} className="w-16 h-16 rounded-lg object-cover border border-slate-200 dark:border-slate-700" />
                       ) : (
-                        <div className="w-16 h-16 rounded-xl bg-background border border-foreground/10 flex items-center justify-center text-muted">
-                           <Eye className="w-6 h-6 opacity-30" />
-                        </div>
-                      )}
-                      {a.face_detected && (
-                        <div className="absolute -bottom-2 -right-2 w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
-                          <Brain className="w-3 h-3 text-emerald-400" />
+                        <div className="w-16 h-16 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400">
+                          <Eye className="w-5 h-5" />
                         </div>
                       )}
                     </div>
-
-                    {/* Alert Details */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                         <h3 className="text-sm font-bold text-red-500 truncate pr-2">
-                           {a.identified_name ? a.identified_name : "UNKNOWN ENTITY"}
-                         </h3>
-                         <span className="text-[10px] py-0.5 px-2 rounded-full bg-red-500/10 text-red-400 font-mono">ID: {a.id}</span>
-                      </div>
-                      
-                      <div className="space-y-1 mt-2">
-                        <p className="text-xs flex items-center justify-between text-foreground/80">
-                          <span>Status:</span>
-                          <span className="font-semibold px-2 py-0.5 rounded bg-red-500/20 text-red-400">NO ID CARD</span>
-                        </p>
-                        <p className="text-xs flex items-center justify-between text-muted">
-                          <span>Time:</span>
-                          <span className="font-mono">{new Date(a.timestamp).toLocaleTimeString()}</span>
-                        </p>
-                        {a.identified_name && (
-                          <div className="w-full bg-background rounded-full h-1.5 mt-2 overflow-hidden">
-                            <motion.div 
-                              initial={{ width: 0 }}
-                              animate={{ width: `${a.similarity * 100}%` }}
-                              transition={{ duration: 1, delay: 0.2 }}
-                              className="bg-gradient-to-r from-blue-500 to-indigo-500 h-1.5 rounded-full" 
-                            />
-                          </div>
-                        )}
-                        {a.identified_name && (
-                           <p className="text-[10px] text-right mt-0.5 text-indigo-400 font-medium">Confidence: {(a.similarity * 100).toFixed(1)}%</p>
-                        )}
-                      </div>
+                      <p className="text-sm font-semibold text-red-600 truncate">{a.identified_name || "Unknown entity"}</p>
+                      <p className="text-xs muted-text mt-1">No ID card detected</p>
+                      <p className="text-xs muted-text mt-1">{new Date(a.timestamp).toLocaleTimeString()} · ID: {a.id}</p>
+                      {a.identified_name ? (
+                        <p className="text-xs text-blue-600 mt-1">Confidence: {(a.similarity * 100).toFixed(1)}%</p>
+                      ) : null}
                     </div>
-
                   </motion.div>
                 ))}
               </div>
             )}
           </div>
         </motion.div>
-
       </div>
       <GuardAssistant />
     </div>

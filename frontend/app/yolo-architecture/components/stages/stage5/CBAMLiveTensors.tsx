@@ -62,8 +62,6 @@ export function CBAMLiveTensors({ scenario }: Props) {
   const sMergeY  = ["40%","40%","40%","40%","40%","40%","40%","40%","40%","40%","40%","40%"];
 
   const block = "absolute flex items-center justify-center z-30";
-  const color = detected ? "amber" : "red";
-
   return (
     <>
       {/* Input */}

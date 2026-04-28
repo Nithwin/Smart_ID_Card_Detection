@@ -1,12 +1,6 @@
 import { motion } from "framer-motion";
 
-interface Props {
-  scenario: "detected" | "not_detected";
-}
-
-export function CoordStaticNodes({ scenario }: Props) {
-  const detected = scenario === "detected";
-
+export function CoordStaticNodes() {
   const node3d = (deg: number) => ({
     transform: `perspective(600px) rotateY(${deg}deg)`,
     transformStyle: "preserve-3d" as const,

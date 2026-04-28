@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Image from "next/image";
 import { UserPlus, Trash2, Upload, Loader2, Users, RefreshCw, Database, CheckCircle } from "lucide-react";
+import { Button, Card, PageSection, TextInput } from "../components/ui";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
@@ -63,7 +65,7 @@ export default function FacesPage() {
       fd.append("file", file);
       const res = await fetch("/api/faces/register", { method: "POST", body: fd });
       if (res.ok) {
-        const data = await res.json();
+        await res.json();
         setMsg(`Registered ${name} successfully!`);
         setName("");
         setFile(null);
@@ -95,135 +97,140 @@ export default function FacesPage() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Face Registry</h1>
-          <p className="text-sm text-gray-500">
-            {knownFaces.length} known {knownFaces.length === 1 ? "person" : "persons"} loaded
-            {recognitionReady ? " · InsightFace ready" : " · Recognition disabled"}
-          </p>
-        </div>
-        <button
-          onClick={reloadDB}
-          disabled={reloading}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm transition disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${reloading ? "animate-spin" : ""}`} />
-          Reload DB
-        </button>
+    <div className="page-shell page-animate space-y-6 pb-10">
+      <div className="section-animate">
+        <PageSection
+        title="Face Registry"
+        description={
+          `${knownFaces.length} known ${knownFaces.length === 1 ? "person" : "persons"} loaded` +
+          (recognitionReady ? " · InsightFace ready" : " · Recognition disabled")
+        }
+        actions={
+          <Button
+            onClick={reloadDB}
+            disabled={reloading}
+            variant="secondary"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${reloading ? "animate-spin" : ""}`} />
+            Reload DB
+          </Button>
+        }
+        />
       </div>
 
       {/* Known Faces from known_faces/ directory */}
-      <div>
+      <div className="section-animate delay-1">
         <div className="flex items-center gap-2 mb-4">
           <Database className="w-4 h-4 text-emerald-400" />
-          <h2 className="font-semibold text-sm text-white">Known Faces Database ({knownFaces.length})</h2>
+          <h2 className="font-semibold text-sm">Known Faces Database ({knownFaces.length})</h2>
         </div>
 
         {knownFaces.length === 0 ? (
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-            <Users className="w-10 h-10 text-gray-700 mx-auto mb-2" />
-            <p className="text-sm text-gray-600">No known faces. Add images to backend/known_faces/</p>
-          </div>
+          <Card className="p-8 text-center">
+            <Users className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
+            <p className="text-sm muted-text">No known faces. Add images to backend/known_faces/</p>
+          </Card>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {knownFaces.map((f) => (
-              <div key={f.filename} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-                <div className="h-44 bg-gray-800">
-                  <img
+              <Card key={f.filename} className="overflow-hidden">
+                <div className="h-44 bg-slate-100 dark:bg-slate-800">
+                  <Image
                     src={`${BACKEND_URL}${f.image_url}`}
                     alt={f.name}
+                    width={400}
+                    height={300}
+                    unoptimized
                     className="h-full w-full object-cover"
                   />
                 </div>
                 <div className="p-3 flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-white">{f.name}</p>
-                    <p className="text-[10px] text-gray-500">{f.filename}</p>
+                    <p className="text-sm font-semibold">{f.name}</p>
+                    <p className="text-[10px] muted-text">{f.filename}</p>
                   </div>
                   {f.has_embedding && (
                     <CheckCircle className="w-4 h-4 text-emerald-400" />
                   )}
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 section-animate delay-2">
         {/* Register Form */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+        <Card className="p-5 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <UserPlus className="w-4 h-4 text-blue-400" />
-            <h2 className="font-semibold text-sm text-white">Register New Face</h2>
+            <h2 className="font-semibold text-sm">Register New Face</h2>
           </div>
 
-          <input
+          <TextInput
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Person name"
-            className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500"
           />
 
           <div
             onClick={() => document.getElementById("face-input")?.click()}
-            className="border-2 border-dashed border-gray-700 rounded-lg p-4 text-center cursor-pointer hover:border-blue-500/50 transition"
+            className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-lg p-4 text-center cursor-pointer hover:border-blue-500/50 transition"
           >
             {preview ? (
-              <img src={preview} alt="Preview" className="max-h-32 mx-auto rounded" />
+              <Image src={preview} alt="Preview" width={180} height={180} unoptimized className="max-h-32 w-auto mx-auto rounded" />
             ) : (
               <>
-                <Upload className="w-8 h-8 text-gray-600 mx-auto mb-1" />
-                <p className="text-xs text-gray-500">Upload face photo</p>
+                <Upload className="w-8 h-8 text-slate-400 mx-auto mb-1" />
+                <p className="text-xs muted-text">Upload face photo</p>
               </>
             )}
             <input id="face-input" type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} className="hidden" />
           </div>
 
-          <button
+          <Button
             onClick={register}
             disabled={!file || !name.trim() || loading}
-            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-lg font-semibold text-sm transition flex items-center justify-center gap-2 text-white"
+            className="w-full py-2.5 rounded-lg text-sm flex items-center justify-center gap-2"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
             Register Face
-          </button>
+          </Button>
 
           {msg && <p className={`text-xs ${msg.startsWith("Error") ? "text-red-400" : "text-green-400"}`}>{msg}</p>}
-        </div>
+        </Card>
 
         {/* Registered Faces (via API) */}
         <div className="lg:col-span-2">
           <div className="flex items-center gap-2 mb-4">
             <Users className="w-4 h-4 text-blue-400" />
-            <h2 className="font-semibold text-sm text-white">Registered via App ({faces.length})</h2>
+            <h2 className="font-semibold text-sm">Registered via App ({faces.length})</h2>
           </div>
 
           {faces.length === 0 ? (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
-              <Users className="w-10 h-10 text-gray-700 mx-auto mb-2" />
-              <p className="text-sm text-gray-600">No faces registered yet. Use the form or add photos to known_faces/</p>
-            </div>
+            <Card className="p-12 text-center">
+              <Users className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
+              <p className="text-sm muted-text">No faces registered yet. Use the form or add photos to known_faces/</p>
+            </Card>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {faces.map((f) => (
-                <div key={f.person_id} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden group">
-                  <div className="h-32 bg-gray-800">
-                    <img src={`${BACKEND_URL}/face_db/${f.image}`} alt={f.name} className="h-full w-full object-cover" />
+                <Card key={f.person_id} className="overflow-hidden group">
+                  <div className="h-32 bg-slate-100 dark:bg-slate-800">
+                    <Image src={`${BACKEND_URL}/face_db/${f.image}`} alt={f.name} width={300} height={200} unoptimized className="h-full w-full object-cover" />
                   </div>
                   <div className="p-3 flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-white">{f.name}</p>
-                      <p className="text-[10px] text-gray-500">{new Date(f.registered_at).toLocaleDateString()}</p>
+                      <p className="text-sm font-medium">{f.name}</p>
+                      <p className="text-[10px] muted-text">{new Date(f.registered_at).toLocaleDateString()}</p>
                     </div>
-                    <button onClick={() => deleteFace(f.person_id)} className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition opacity-0 group-hover:opacity-100">
+                    <button onClick={() => deleteFace(f.person_id)} className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition opacity-100 md:opacity-0 md:group-hover:opacity-100">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
           )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Image from "next/image";
 import {
   Upload,
   Loader2,
@@ -11,6 +12,7 @@ import {
   Clock,
   ImageIcon,
 } from "lucide-react";
+import { Button, Card, PageSection, StatusBadge } from "../components/ui";
 
 interface DetectionResult {
   stats: {
@@ -66,63 +68,60 @@ export default function DetectPage() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Image Detection</h1>
-        <p className="text-sm text-gray-500">Upload an image to detect ID cards and check compliance</p>
+    <div className="page-shell page-animate space-y-6 pb-10">
+      <div className="section-animate">
+        <PageSection title="Image Detection" description="Upload an image to detect ID cards and check compliance." />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left — Upload */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 section-animate delay-1">
         <div className="space-y-4">
-          <div
+          <Card
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
             onClick={() => document.getElementById("file-input")?.click()}
-            className="border-2 border-dashed border-gray-700 rounded-xl p-8 text-center hover:border-blue-500/50 transition cursor-pointer bg-gray-900/50"
+            className="app-card border-2 border-dashed border-slate-300 dark:border-slate-700 p-8 text-center hover:border-blue-500/50 transition cursor-pointer"
           >
             {preview ? (
-              <img src={preview} alt="Preview" className="max-h-72 mx-auto rounded-lg" />
+              <Image src={preview} alt="Preview" width={720} height={480} unoptimized className="max-h-72 w-auto mx-auto rounded-lg" />
             ) : (
               <>
-                <ImageIcon className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                <p className="text-gray-300 font-medium">Drop image here or click to upload</p>
-                <p className="text-xs text-gray-600 mt-1">JPG, PNG, WEBP</p>
+                <ImageIcon className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                <p className="text-slate-700 dark:text-slate-200 font-medium">Drop image here or click to upload</p>
+                <p className="text-xs muted-text mt-1">JPG, PNG, WEBP</p>
               </>
             )}
             <input id="file-input" type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} className="hidden" />
-          </div>
+          </Card>
 
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-            <label className="text-sm text-gray-300 flex items-center justify-between">
+          <Card className="p-4">
+            <label className="text-sm muted-text flex items-center justify-between">
               <span>Confidence Threshold</span>
-              <span className="font-mono text-blue-400">{confidence.toFixed(2)}</span>
+              <span className="font-mono text-blue-600 dark:text-blue-300">{confidence.toFixed(2)}</span>
             </label>
             <input
               type="range" min={0.1} max={0.95} step={0.05} value={confidence}
               onChange={(e) => setConfidence(parseFloat(e.target.value))}
               className="w-full mt-2 accent-blue-500"
             />
-          </div>
+          </Card>
 
-          <button
+          <Button
             onClick={runDetection}
             disabled={!file || loading}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-xl font-semibold transition flex items-center justify-center gap-2 text-white"
+            className="w-full py-3 rounded-xl flex items-center justify-center gap-2"
           >
             {loading ? <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</> : <><Upload className="w-5 h-5" /> Run Detection</>}
-          </button>
+          </Button>
 
           {error && <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-sm text-red-400">{error}</div>}
         </div>
 
-        {/* Right — Results */}
-        <div className="space-y-4">
+        <div className="space-y-4 section-animate delay-2">
           {result ? (
             <>
-              <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-                <img src={`data:image/jpeg;base64,${result.annotated_image}`} alt="Result" className="w-full" />
-              </div>
+              <Card className="overflow-hidden">
+                <Image src={`data:image/jpeg;base64,${result.annotated_image}`} alt="Result" width={1280} height={720} unoptimized className="w-full h-auto" />
+              </Card>
 
               <div className="grid grid-cols-2 gap-3">
                 <Mini icon={<User className="w-4 h-4" />} label="Persons" value={result.stats.persons_detected} color="text-blue-400 bg-blue-500/10 border-blue-500/20" />
@@ -131,15 +130,15 @@ export default function DetectPage() {
                 <Mini icon={<AlertTriangle className="w-4 h-4" />} label="Violations" value={result.stats.violations} color="text-red-400 bg-red-500/10 border-red-500/20" />
               </div>
 
-              <div className="bg-gray-900 border border-gray-800 rounded-xl p-3 flex items-center gap-2 text-sm">
-                <Clock className="w-4 h-4 text-gray-400" />
-                <span className="text-gray-400">Inference:</span>
-                <span className="font-mono text-blue-400">{result.stats.inference_ms}ms</span>
-              </div>
+              <Card className="p-3 flex items-center gap-2 text-sm">
+                <Clock className="w-4 h-4 text-slate-500" />
+                <span className="muted-text">Inference:</span>
+                <StatusBadge tone="info">{result.stats.inference_ms}ms</StatusBadge>
+              </Card>
 
               {result.compliance.length > 0 && (
-                <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-2">
-                  <h3 className="font-semibold text-sm text-white mb-2">Compliance Details</h3>
+                <Card className="p-4 space-y-2">
+                  <h3 className="font-semibold text-sm mb-2">Compliance Details</h3>
                   {result.compliance.map((c, i) => (
                     <div key={i} className={`flex items-center justify-between p-2.5 rounded-lg text-sm ${c.compliant ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"}`}>
                       <div className="flex items-center gap-2">
@@ -158,14 +157,14 @@ export default function DetectPage() {
                       )}
                     </div>
                   ))}
-                </div>
+                </Card>
               )}
             </>
           ) : (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-16 text-center">
-              <ImageIcon className="w-16 h-16 text-gray-800 mx-auto mb-3" />
-              <p className="text-gray-600 text-sm">Upload an image and click detect</p>
-            </div>
+            <Card className="p-16 text-center">
+              <ImageIcon className="w-16 h-16 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
+              <p className="muted-text text-sm">Upload an image and click detect.</p>
+            </Card>
           )}
         </div>
       </div>

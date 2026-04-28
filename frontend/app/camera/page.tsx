@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Camera, CameraOff, Loader2, CheckCircle, AlertTriangle, Users, CreditCard, Fingerprint, Smartphone, Monitor, Wifi } from "lucide-react";
+import { Button, Card, PageSection, TextInput } from "../components/ui";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
@@ -26,13 +27,7 @@ export default function CameraPage() {
   const [testResult, setTestResult] = useState<null | boolean>(null);
   const [testing, setTesting] = useState(false);
 
-  // Scan for available cameras on mount
-  useEffect(() => {
-    fetch("/api/camera/status").then(r => r.json()).then(d => setRunning(d.running)).catch(() => {});
-    scanDevices();
-  }, []);
-
-  const scanDevices = async () => {
+  const scanDevices = useCallback(async () => {
     setScanning(true);
     try {
       const res = await fetch("/api/camera/devices");
@@ -44,7 +39,13 @@ export default function CameraPage() {
         }
       }
     } catch {} finally { setScanning(false); }
-  };
+  }, [selectedDevice]);
+
+  // Scan for available cameras on mount
+  useEffect(() => {
+    fetch("/api/camera/status").then(r => r.json()).then(d => setRunning(d.running)).catch(() => {});
+    scanDevices();
+  }, [scanDevices]);
 
   const autoDetectMobile = async () => {
     setDetecting(true);
@@ -118,41 +119,40 @@ export default function CameraPage() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Live Camera</h1>
-          <p className="text-sm text-gray-500">Backend camera with real-time detection (MJPEG stream)</p>
-        </div>
-        <button
-          onClick={toggle}
-          disabled={loading}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition ${
-            running
-              ? "bg-red-600 hover:bg-red-700 text-white"
-              : "bg-green-600 hover:bg-green-700 text-white"
-          } disabled:opacity-50`}
-        >
-          {loading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : running ? (
-            <CameraOff className="w-4 h-4" />
-          ) : (
-            <Camera className="w-4 h-4" />
-          )}
-          {running ? "Stop Camera" : "Start Camera"}
-        </button>
+    <div className="page-shell page-animate space-y-6 pb-10">
+      <div className="section-animate">
+        <PageSection
+        title="Live Camera"
+        description="Backend camera with real-time detection (MJPEG stream)."
+        actions={
+          <Button
+            onClick={toggle}
+            disabled={loading}
+            variant={running ? "danger" : "primary"}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl"
+          >
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : running ? (
+              <CameraOff className="w-4 h-4" />
+            ) : (
+              <Camera className="w-4 h-4" />
+            )}
+            {running ? "Stop Camera" : "Start Camera"}
+          </Button>
+        }
+        />
       </div>
 
       {/* Camera Source Selector */}
       {!running && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4">
-          <p className="text-sm font-medium text-white">Select Camera Source</p>
+        <Card className="p-4 space-y-4 section-animate delay-1">
+          <p className="text-sm font-medium">Select Camera Source</p>
           <div className="flex gap-2">
             <button
               onClick={() => setSourceMode("usb")}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
-                sourceMode === "usb" ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                sourceMode === "usb" ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
               }`}
             >
               <Monitor className="w-4 h-4" /> USB / Built-in
@@ -160,7 +160,7 @@ export default function CameraPage() {
             <button
               onClick={() => setSourceMode("ip")}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
-                sourceMode === "ip" ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                sourceMode === "ip" ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
               }`}
             >
               <Wifi className="w-4 h-4" /> IP Camera / Mobile
@@ -170,13 +170,13 @@ export default function CameraPage() {
           {sourceMode === "usb" ? (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <p className="text-xs text-gray-500">Available devices:</p>
+                <p className="text-xs muted-text">Available devices:</p>
                 <button onClick={scanDevices} disabled={scanning} className="text-xs text-blue-400 hover:text-blue-300 transition">
                   {scanning ? "Scanning..." : "Rescan"}
                 </button>
               </div>
               {devices.length === 0 ? (
-                <p className="text-xs text-gray-600">No cameras found. Connect a camera and click Rescan.</p>
+                <p className="text-xs muted-text">No cameras found. Connect a camera and click Rescan.</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {devices.map(d => (
@@ -186,7 +186,7 @@ export default function CameraPage() {
                       className={`flex items-center gap-3 p-3 rounded-lg border text-left transition ${
                         selectedDevice === d.index
                           ? "border-blue-500 bg-blue-500/10 text-white"
-                          : "border-gray-700 bg-gray-800/50 text-gray-400 hover:border-gray-600"
+                          : "border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:border-slate-400"
                       }`}
                     >
                       {d.index === 0 ? <Monitor className="w-5 h-5 shrink-0" /> : <Smartphone className="w-5 h-5 shrink-0" />}
@@ -202,8 +202,8 @@ export default function CameraPage() {
           ) : (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-xs text-gray-500">
-                  Mobile camera via <strong className="text-gray-300">DroidCam</strong>, <strong className="text-gray-300">IP Webcam</strong>, or any MJPEG/RTSP source
+                <p className="text-xs muted-text">
+                  Mobile camera via <strong className="text-slate-700 dark:text-slate-300">DroidCam</strong>, <strong className="text-slate-700 dark:text-slate-300">IP Webcam</strong>, or any MJPEG/RTSP source
                 </p>
                 <button
                   onClick={autoDetectMobile}
@@ -227,7 +227,7 @@ export default function CameraPage() {
                         className={`flex items-center gap-3 p-3 rounded-lg border text-left transition ${
                           ipUrl === cam.url
                             ? "border-green-500 bg-green-500/10 text-white"
-                            : "border-gray-700 bg-gray-800/50 text-gray-400 hover:border-gray-600"
+                            : "border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:border-slate-400"
                         }`}
                       >
                         <Smartphone className="w-5 h-5 shrink-0 text-green-400" />
@@ -243,17 +243,17 @@ export default function CameraPage() {
 
               {/* Manual URL input */}
               <div className="flex gap-2">
-                <input
+                <TextInput
                   type="text"
                   value={ipUrl}
                   onChange={e => { setIpUrl(e.target.value); setTestResult(null); }}
                   placeholder="http://192.168.1.100:8080/video"
-                  className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500 transition"
+                  className="flex-1 py-2.5"
                 />
                 <button
                   onClick={testUrl}
                   disabled={testing || !ipUrl.trim()}
-                  className="px-4 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm text-gray-300 font-medium transition disabled:opacity-40"
+                  className="px-4 py-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-200 font-medium transition disabled:opacity-40"
                 >
                   {testing ? "Testing..." : "Test"}
                 </button>
@@ -266,20 +266,21 @@ export default function CameraPage() {
                 </p>
               )}
 
-              <div className="text-xs text-gray-600 space-y-0.5 pt-1 border-t border-gray-800">
-                <p className="text-gray-500 font-medium mb-1">Common URLs:</p>
+              <div className="text-xs muted-text space-y-0.5 pt-1 border-t border-slate-200 dark:border-slate-700">
+                <p className="font-medium mb-1">Common URLs:</p>
                 <p><button onClick={() => setIpUrl("http://localhost:4747/video")} className="text-blue-400 hover:underline">DroidCam USB</button> — http://localhost:4747/video</p>
                 <p><button onClick={() => setIpUrl("http://192.168.1.100:8080/video")} className="text-blue-400 hover:underline">IP Webcam</button> — http://PHONE_IP:8080/video</p>
               </div>
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {/* Video Feed */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <Card className="overflow-hidden section-animate delay-2">
         {running ? (
           <div className="relative">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`${BACKEND_URL}/api/camera/feed?t=${feedKey}`}
               alt="Live camera feed"
@@ -291,17 +292,17 @@ export default function CameraPage() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-24 text-gray-600">
-            <Camera className="w-16 h-16 mb-3 text-gray-700" />
+          <div className="flex flex-col items-center justify-center py-24 muted-text">
+            <Camera className="w-16 h-16 mb-3 text-slate-400" />
             <p className="text-sm">Camera is off. Select a source above and click &quot;Start Camera&quot;.</p>
-            <p className="text-xs text-gray-700 mt-1">Supports USB cameras, built-in webcams, and IP/mobile cameras</p>
+            <p className="text-xs mt-1">Supports USB cameras, built-in webcams, and IP/mobile cameras</p>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Live Stats */}
       {running && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 section-animate delay-3">
           <LiveStat icon={<Users className="w-4 h-4" />} label="Detections" value={stats.total_detections} color="text-blue-400 bg-blue-500/10 border-blue-500/20" />
           <LiveStat icon={<CreditCard className="w-4 h-4" />} label="Frames" value={stats.total_frames} color="text-violet-400 bg-violet-500/10 border-violet-500/20" />
           <LiveStat icon={<CheckCircle className="w-4 h-4" />} label="Compliant" value={stats.compliant} color="text-green-400 bg-green-500/10 border-green-500/20" />
@@ -311,17 +312,17 @@ export default function CameraPage() {
       )}
 
       {/* Info */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm text-gray-400">
-        <p className="font-medium text-white text-xs mb-2">How it works</p>
-        <ul className="space-y-1 text-xs text-gray-500">
-          <li>• Camera capture runs on the <strong className="text-gray-300">backend server</strong> (not your browser)</li>
-          <li>• <strong className="text-gray-300">USB cameras:</strong> Detected automatically — laptops, external webcams, phones via USB</li>
-          <li>• <strong className="text-gray-300">Mobile via USB:</strong> Use <strong className="text-gray-300">DroidCam</strong> app — install on phone + PC, connect USB, select Camera 1</li>
-          <li>• <strong className="text-gray-300">Mobile via WiFi:</strong> Use IP Webcam app, enter the stream URL in IP Camera mode</li>
+      <Card className="p-4 text-sm muted-text section-animate delay-4">
+        <p className="font-medium text-xs mb-2 text-slate-900 dark:text-white">How it works</p>
+        <ul className="space-y-1 text-xs">
+          <li>• Camera capture runs on the <strong className="text-slate-700 dark:text-slate-200">backend server</strong> (not your browser)</li>
+          <li>• <strong className="text-slate-700 dark:text-slate-200">USB cameras:</strong> Detected automatically — laptops, external webcams, phones via USB</li>
+          <li>• <strong className="text-slate-700 dark:text-slate-200">Mobile via USB:</strong> Use <strong className="text-slate-700 dark:text-slate-200">DroidCam</strong> app — install on phone + PC, connect USB, select Camera 1</li>
+          <li>• <strong className="text-slate-700 dark:text-slate-200">Mobile via WiFi:</strong> Use IP Webcam app, enter the stream URL in IP Camera mode</li>
           <li>• Each frame is processed through CA-YOLOv8 + InsightFace pipeline</li>
           <li>• Violations are automatically logged with identified names to the database</li>
         </ul>
-      </div>
+      </Card>
     </div>
   );
 }
